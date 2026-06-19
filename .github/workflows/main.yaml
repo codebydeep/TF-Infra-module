@@ -29,10 +29,9 @@ env:
 
 jobs:
   terraform:
-    name: Terraform
+    name: Terraform Deployment
     runs-on: ubuntu-latest
 
-    # Must match GitHub Environment names
     environment: ${{ inputs.environment }}
 
     steps:
@@ -51,17 +50,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Debug
+      - name: Debug Repository
         run: |
+          echo "========================="
           pwd
+          echo "========================="
           ls -R
+          echo "========================="
           echo "Environment : ${{ inputs.environment }}"
           echo "Action      : ${{ inputs.action }}"
+          echo "========================="
 
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Format
+      - name: Terraform Format Check
         run: terraform fmt -check
 
       - name: Terraform Validate
@@ -72,20 +75,20 @@ jobs:
         run: |
           terraform plan \
             -input=false \
-            -var-file=environments/${{ inputs.environment }}.tfvars
+            -var-file="environments/${{ inputs.environment }}/${{ inputs.environment }}.tfvars"
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
         run: |
           terraform apply \
-            -auto-approve \
             -input=false \
-            -var-file=environments/${{ inputs.environment }}.tfvars
+            -auto-approve \
+            -var-file="environments/${{ inputs.environment }}/${{ inputs.environment }}.tfvars"
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
         run: |
           terraform destroy \
-            -auto-approve \
             -input=false \
-            -var-file=environments/${{ inputs.environment }}.tfvars
+            -auto-approve \
+            -var-file="environments/${{ inputs.environment }}/${{ inputs.environment }}.tfvars"
