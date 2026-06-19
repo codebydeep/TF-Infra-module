@@ -1,4 +1,4 @@
-name: Infrastructure ready - Terraform apply
+name: Terraform apply - Make Infrastructure ready
 
 on: 
   push: 
