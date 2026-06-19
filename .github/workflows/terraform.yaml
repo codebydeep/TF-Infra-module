@@ -44,6 +44,9 @@ jobs:
           echo "Terraform Files:"
           find . -name "*.tf" -o -name "*.tfvars"
 
+      - name: Delete stale lock file
+        run: rm -f .terraform.lock.hcl
+
       - name: Terraform Init
         run: terraform init
 
