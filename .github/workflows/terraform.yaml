@@ -1,25 +1,12 @@
-name: Terraform CI/CD
+name: Terraform apply - Make Infrastructure ready
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Select Environment"
-        required: true
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
-
-      action:
-        description: "Terraform Action"
-        required: true
-        type: choice
-        options:
-          - plan
-          - apply
-          - destroy
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 env:
   AWS_REGION: us-east-1
@@ -27,13 +14,11 @@ env:
 
 jobs:
   terraform:
-    name: Terraform Deployment
+    name: Terraform Plan and Apply
     runs-on: ubuntu-latest
 
-    environment: ${{ github.event.inputs.environment }}
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Terraform
@@ -48,39 +33,32 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Show Selected Parameters
+      - name: Debug Repository
         run: |
-          echo "Environment : ${{ github.event.inputs.environment }}"
-          echo "Action      : ${{ github.event.inputs.action }}"
+          echo "Current Directory:"
+          pwd
+          echo ""
+          echo "Repository Files:"
+          ls -la
+          echo ""
+          echo "Terraform Files:"
+          find . -name "*.tf" -o -name "*.tfvars"
+
+      - name: Delete stale lock file
+        run: rm -f .terraform.lock.hcl
 
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Format
+      - name: Terraform Format Check
         run: terraform fmt -check
 
       - name: Terraform Validate
         run: terraform validate
 
       - name: Terraform Plan
-        if: github.event.inputs.action == 'plan'
-        run: |
-          terraform plan \
-            -input=false \
-            -var-file=environments/${{ github.event.inputs.environment }}/${{ github.event.inputs.environment }}.tfvars
+        run: terraform plan -input=false -var-file=terraform.tfvars
 
       - name: Terraform Apply
-        if: github.event.inputs.action == 'apply'
-        run: |
-          terraform apply \
-            -input=false \
-            -auto-approve \
-            -var-file=environments/${{ github.event.inputs.environment }}/${{ github.event.inputs.environment }}.tfvars
-
-      - name: Terraform Destroy
-        if: github.event.inputs.action == 'destroy'
-        run: |
-          terraform destroy \
-            -input=false \
-            -auto-approve \
-            -var-file=environments/${{ github.event.inputs.environment }}/${{ github.event.inputs.environment }}.tfvars
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -input=false -auto-approve -var-file=terraform.tfvars
